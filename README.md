@@ -13,15 +13,6 @@
 
 ---
 
-> [!NOTE]
-> **Acknowledgement — pycalima**
->
-> The BLE GATT characteristic UUIDs and the sensor data encoding/decoding logic used in this tool were derived through reverse engineering of the PAX Calima BLE protocol, greatly aided by the open-source project **[pycalima](https://github.com/PatrickE94/pycalima)** by [@PatrickE94](https://github.com/PatrickE94).
->
-> Full credit goes to that project for the groundwork. This PoC builds on that knowledge to demonstrate the authentication vulnerability.
-
----
-
 ## Overview
 
 This is a **Proof of Concept (PoC)** security assessment tool targeting the **PAX Calima** smart bathroom fan, which communicates over **Bluetooth Low Energy (BLE)**.
@@ -170,10 +161,12 @@ This vulnerability was identified through reverse engineering of the BLE protoco
 ## Credits
 
 - **[pycalima](https://github.com/PatrickE94/pycalima)** by [@PatrickE94](https://github.com/PatrickE94) — for the reverse engineering of the PAX Calima BLE protocol that made this work possible.
-- **[bleak](https://github.com/hbldh/bleak)** — cross-platform BLE library for Python.
 
 ---
 
-## License
-
-MIT License — see [LICENSE](LICENSE) for details.
+> [!NOTE]
+> **Acknowledgement — pycalima**
+>
+> The BLE GATT characteristic UUIDs and the sensor data encoding/decoding logic used in this tool were derived through reverse engineering of the PAX Calima BLE protocol, greatly aided by the open-source project **[pycalima](https://github.com/PatrickE94/pycalima)** by [@PatrickE94](https://github.com/PatrickE94).
+>
+> Full credit goes to that project for the groundwork. This PoC builds on that knowledge to demonstrate the authentication vulnerability.
