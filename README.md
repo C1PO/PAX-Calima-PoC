@@ -39,21 +39,6 @@ The device does **not implement**:
 
 This makes it vulnerable to sequential brute-force over BLE.
 
-### Key GATT Characteristics
-
-| Characteristic | UUID | Purpose |
-|----------------|------|---------|
-| PIN Code | `4cad343a-...` | Write PIN for authentication |
-| PIN Confirmation | `d1ae6b70-...` | Read result (non-zero = success) |
-| Sensor Data | `528b80e8-...` | Temperature, humidity, light, fan RPM |
-| Fan Speed | `faa49e09-...` | Current fan speed settings |
-| Boost | `1488a757-...` | Activate/deactivate boost mode |
-| Sensitivity | `e782e131-...` | Humidity threshold and speed levels |
-| Mode | `b5836b55-...` | Current operating mode |
-
-UUIDs and data structures were reverse-engineered with significant help from the **[pycalima](https://github.com/PatrickE94/pycalima)** library.
-
----
 
 ## Requirements
 
@@ -139,19 +124,6 @@ Once authenticated, a control panel allows you to:
 
 ---
 
-## Estimated Brute-Force Time
-
-The PIN space is 10^8 (100 million combinations). Based on observed BLE throughput:
-
-| Speed | Estimated time (worst case) |
-|-------|------------------------------|
-| ~20 attempts/s | ~58 days |
-| ~50 attempts/s | ~23 days |
-
-In practice, the PIN is often short or predictable, significantly reducing the search space.
-
----
-
 ## Responsible Disclosure
 
 This vulnerability was identified through reverse engineering of the BLE protocol. The findings have been shared publicly as a PoC to raise awareness about BLE security in consumer IoT devices.
@@ -162,7 +134,6 @@ This vulnerability was identified through reverse engineering of the BLE protoco
 
 - **[pycalima](https://github.com/PatrickE94/pycalima)** by [@PatrickE94](https://github.com/PatrickE94) — for the reverse engineering of the PAX Calima BLE protocol that made this work possible.
 
----
 
 > [!NOTE]
 > **Acknowledgement — pycalima**
