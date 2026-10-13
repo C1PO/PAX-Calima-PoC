@@ -42,10 +42,6 @@ This makes it vulnerable to sequential brute-force over BLE.
 
 ---
 
-https://github.com/user-attachments/assets/0c1da154-3c9f-4cf2-88d2-6c6fd9b56284
-
----
-
 ## Requirements
 
 - Python 3.8+
