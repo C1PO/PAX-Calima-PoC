@@ -130,9 +130,6 @@ This vulnerability was identified through reverse engineering of the BLE protoco
 
 ## Credits
 
-- **[pycalima](https://github.com/PatrickE94/pycalima)** by [@PatrickE94](https://github.com/PatrickE94) — for the reverse engineering of the PAX Calima BLE protocol that made this work possible.
-
-
 > [!NOTE]
 > **Acknowledgement — pycalima**
 >
