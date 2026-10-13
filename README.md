@@ -83,11 +83,7 @@ To find the MAC address, you can use:
 # Linux
 bluetoothctl scan on
 
-# macOS (UUID is used instead of MAC)
-python3 -c "import asyncio; from bleak import BleakScanner; asyncio.run(BleakScanner.discover())"
 ```
-
-> **Note for macOS users:** Apple's CoreBluetooth framework does not expose raw MAC addresses. You will see a UUID instead. Use that UUID as the `TARGET` value.
 
 ---
 
