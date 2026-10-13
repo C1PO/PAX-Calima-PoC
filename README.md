@@ -134,5 +134,3 @@ This vulnerability was identified through reverse engineering of the BLE protoco
 > **Acknowledgement — pycalima**
 >
 > The BLE GATT characteristic UUIDs and the sensor data encoding/decoding logic used in this tool were derived through reverse engineering of the PAX Calima BLE protocol, greatly aided by the open-source project **[pycalima](https://github.com/PatrickE94/pycalima)** by [@PatrickE94](https://github.com/PatrickE94).
->
-> Full credit goes to that project for the groundwork. This PoC builds on that knowledge to demonstrate the authentication vulnerability.
